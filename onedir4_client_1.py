@@ -14,13 +14,13 @@ from common import COMMANDS, display_message, validate_file_md5_hash, get_file_m
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
-HOST = '172.27.99.118'  #'localhost' #'172.27.99.118'
+HOST = 'localhost' #'172.27.99.118'  #'localhost' #'172.27.99.118'
 PORT = 8123
 DIRECTORY = '/home/student/testonedirlocal'
 
 #for watchdog
 path = '/home/boom/student/OneDir/'
-dest = '/home/sravan/OneDir/' #'/home/boom/student/OneDir_server/' #'/home/sravan/OneDir/'
+dest = '/home/boom/student/OneDir_server/' #'/home/sravan/OneDir/'
 fileActivity = []
 
 # File transfer code down below
@@ -289,7 +289,6 @@ class FileTransferClientFactory(protocol.ClientFactory):
 
                 src = dest + f1[1]
 
-
                 #have to replace ' ' with '|' to prevent ' ' error
                 src_new = src.replace(' ','|')
 
@@ -303,9 +302,14 @@ class FileTransferClientFactory(protocol.ClientFactory):
                 print("Uploading " + path + f1[1])
                 file_path = path + f1[1]
                 filename = dest + f1[1]
+                isDir = 0
 
-                if not os.path.isfile(file_path):
-                    print('ERROR: path does not exist')
+                if os.path.isdir(file_path):
+                    isDir = 1
+                elif os.path.isfile(file_path):
+                    isDir = 0
+                else:
+                    print "%s does not exist" % file_path
                     return
 
                 #calculate file size
@@ -314,14 +318,18 @@ class FileTransferClientFactory(protocol.ClientFactory):
                 #have to replace ' ' with '|' to prevent ' ' error
                 filename_new = filename.replace(' ','|')
 
-                (self.server)[0].transport.write('PUT %s %s\n' % (filename_new, get_file_md5_hash(file_path)))
-                (self.server)[0].setRawMode()
+                if( not isDir):
+                    (self.server)[0].transport.write('PUT %s %s\n' % (filename_new, get_file_md5_hash(file_path)))
+                    (self.server)[0].setRawMode()
 
-                for bytes in read_bytes_from_file(file_path):
-                    (self.server)[0].transport.write(bytes)
+                    for bytes in read_bytes_from_file(file_path):
+                        (self.server)[0].transport.write(bytes)
 
 
-                (self.server)[0].transport.write('\r\n') #
+                    (self.server)[0].transport.write('\r\n') #the end of raw input
+                else:
+                    #for directory
+                    (self.server)[0].transport.write('PUTDIR %s %s\n' % (filename_new, 0))
 
                 # When the transfer is finished, we go back to the line mode
                 (self.server)[0].setLineMode()
