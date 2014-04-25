@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+#### need to fix list and get later..
+
+
+
 '''
 Author: Team 3 OneDir, CS 3240 At The University Of Virginia Spring 2014
 Ty Dang, Sravan Tumuluri, Piyapath Siratarnsophon, Dylan Doggett
@@ -14,7 +18,7 @@ from common import COMMANDS, display_message, validate_file_md5_hash, get_file_m
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
-HOST = 'localhost' #'172.27.99.118'  #'localhost' #'172.27.99.118'
+HOST = 'localhost' #'172.27.99.118'
 PORT = 8123
 DIRECTORY = '/home/student/testonedirlocal'
 
@@ -22,6 +26,9 @@ DIRECTORY = '/home/student/testonedirlocal'
 path = '/home/boom/student/OneDir/'
 dest = '/home/boom/student/OneDir_server/' #'/home/sravan/OneDir/'
 fileActivity = []
+username = 'test_user'
+synchronized = False    #current synchronize state
+setSynchronize = False  #desire synchronize state
 
 # File transfer code down below
 class OnedirProtocol(basic.LineReceiver):
@@ -47,8 +54,8 @@ class OnedirProtocol(basic.LineReceiver):
         self._sendCommand(line)
 
     def _sendCommand(self, line):
+        global setSynchronize, synchronized
         """ Sends a command to the server. """
-
         data = clean_and_split_input(line)
         if len(data) == 0 or data == '':
             return
@@ -171,6 +178,12 @@ class OnedirProtocol(basic.LineReceiver):
             else:
                 print "%s already exists" % src
                 return False
+        elif command == 'syncon':
+            #turn on synchronization
+            setSynchronize = True
+        elif command == 'syncoff':
+            #turn off the synchronization
+            setSynchronize = False
         else:
             self.connection.transport.write('%s %s\n' % (command, data[1]))
 
@@ -277,65 +290,108 @@ class FileTransferClientFactory(protocol.ClientFactory):
         observer.start()
         #############################################################################
 
+
     def sendNotification(self):
-        global fileActivity, path, dest
-        if(len(fileActivity) != 0):
-            # (self.server)[0].transport.write(fileActivity[0]+"\n")
+        global fileActivity, path, dest,username, synchronized, path,setSynchronize
+        fileList = []
+        if setSynchronize and (not synchronized):
+            print("Start synchronization")
+            #deleting the old oneDir and creating new oneDir
+            print("Deleting previously stored oneDir on server")
 
-            #manage fileActivity
-            f1 = fileActivity[0].strip().split("|")
-            if(f1[0] == "Delete"):
-                print("Deleting " + f1[1])
+            src = dest + username + '/OneDir'
 
-                src = dest + f1[1]
+            #have to replace ' ' with '|' to prevent ' ' error
+            src_new = src.replace(' ','|')
 
-                #have to replace ' ' with '|' to prevent ' ' error
-                src_new = src.replace(' ','|')
+            (self.server)[0].transport.write('DELETE %s %s\n' % (src_new, 0))
 
-                (self.server)[0].transport.write('DELETE %s %s\n' % (src_new, 0))
+            #for directory
+            (self.server)[0].transport.write('PUTDIR %s %s\n' % (src_new, 0))
 
-                # When the transfer is finished, we go back to the line mode
-                (self.server)[0].setLineMode()
 
-            elif(f1[0] == "Upload"):
-                #uploading
-                print("Uploading " + path + f1[1])
-                file_path = path + f1[1]
-                filename = dest + f1[1]
-                isDir = 0
+            # When the transfer is finished, we go back to the line mode
+            (self.server)[0].setLineMode()
 
-                if os.path.isdir(file_path):
-                    isDir = 1
-                elif os.path.isfile(file_path):
+
+            #upload onedir
+            for root, subFolders, files in os.walk(path):
+                for f in subFolders:
+                    fileList.append(os.path.join(root,f))
+                for file in files:
+                    fileList.append(os.path.join(root,file))
+            print fileList
+
+            #upload the files
+            for f in fileList:
+                fileActivity.append("Upload" + "|" + (trimPath(f))[1])
+
+            #start synchronize
+            synchronized = True
+
+        if (not setSynchronize) and synchronized:
+            print("Stop synchronization")
+            synchronized = False
+        if synchronized:
+            if(len(fileActivity) != 0):
+                # (self.server)[0].transport.write(fileActivity[0]+"\n")
+
+                #manage fileActivity
+                f1 = fileActivity[0].strip().split("|")
+                if(f1[0] == "Delete"):
+                    print("Deleting " + f1[1])
+
+                    src = dest + username + '/OneDir/' + f1[1]
+
+                    #have to replace ' ' with '|' to prevent ' ' error
+                    src_new = src.replace(' ','|')
+
+                    (self.server)[0].transport.write('DELETE %s %s\n' % (src_new, 0))
+
+                    # When the transfer is finished, we go back to the line mode
+                    (self.server)[0].setLineMode()
+
+                elif(f1[0] == "Upload"):
+                    #uploading
+                    print("Uploading " + path + f1[1])
+                    file_path = path + f1[1]
+                    filename = dest + username  + '/OneDir/'  +f1[1]
                     isDir = 0
-                else:
-                    print "%s does not exist" % file_path
-                    return
+                    ############# testing #############
+                    print("current filename is " + filename)
+                    print("file to append is : " + f1[1])
+                    if os.path.isdir(file_path):
+                        isDir = 1
+                    elif os.path.isfile(file_path):
+                        isDir = 0
+                    else:
+                        print "%s does not exist" % file_path
+                        return
 
-                #calculate file size
-                file_size = os.path.getsize(file_path) / 1024
+                    #calculate file size
+                    file_size = os.path.getsize(file_path) / 1024
 
-                #have to replace ' ' with '|' to prevent ' ' error
-                filename_new = filename.replace(' ','|')
+                    #have to replace ' ' with '|' to prevent ' ' error
+                    filename_new = filename.replace(' ','|')
 
-                if( not isDir):
-                    (self.server)[0].transport.write('PUT %s %s\n' % (filename_new, get_file_md5_hash(file_path)))
-                    (self.server)[0].setRawMode()
+                    if( not isDir):
+                        (self.server)[0].transport.write('PUT %s %s\n' % (filename_new, get_file_md5_hash(file_path)))
+                        (self.server)[0].setRawMode()
 
-                    for bytes in read_bytes_from_file(file_path):
-                        (self.server)[0].transport.write(bytes)
+                        for bytes in read_bytes_from_file(file_path):
+                            (self.server)[0].transport.write(bytes)
 
 
-                    (self.server)[0].transport.write('\r\n') #the end of raw input
-                else:
-                    #for directory
-                    (self.server)[0].transport.write('PUTDIR %s %s\n' % (filename_new, 0))
+                        (self.server)[0].transport.write('\r\n') #the end of raw input
+                    else:
+                        #for directory
+                        (self.server)[0].transport.write('PUTDIR %s %s\n' % (filename_new, 0))
 
-                # When the transfer is finished, we go back to the line mode
-                (self.server)[0].setLineMode()
+                    # When the transfer is finished, we go back to the line mode
+                    (self.server)[0].setLineMode()
 
-            #remove activity from the queue
-            del fileActivity[0]
+                #remove activity from the queue
+                del fileActivity[0]
 
     def serverConnectionMade(self, server):
         self.server.append(server)
