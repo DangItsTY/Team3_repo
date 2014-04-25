@@ -94,11 +94,29 @@ class FileTransferProtocol(basic.LineReceiver):
                 self.transport.write('ENDMSG\n')
                 return
 
+
             self.file_data = (filename, file_hash)
 
             # Switch to the raw mode (for receiving binary data)
             print 'Receiving file: %s' % (filename)
             self.setRawMode()
+
+        elif command == 'putdir':
+
+            try:
+                filename = data[1]
+                #replace the '|' back with ' '
+                filename = filename.replace('|',' ')
+
+            except IndexError:
+                self.transport.write('Missing filename or file MD5 hash\n')
+                self.transport.write('ENDMSG\n')
+                return
+
+            os.mkdir(filename)
+
+            # Switch to the raw mode (for receiving binary data)
+            print 'Creating directory: %s' % (filename)
 
         elif command == 'delete':
             try:
