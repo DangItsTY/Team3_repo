@@ -14,13 +14,13 @@ from common import COMMANDS, display_message, validate_file_md5_hash, get_file_m
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
-HOST = 'localhost' #'172.27.99.118'
+HOST = '172.27.99.118'  #'localhost' #'172.27.99.118'
 PORT = 8123
 DIRECTORY = '/home/student/testonedirlocal'
 
 #for watchdog
 path = '/home/boom/student/OneDir/'
-dest = '/home/boom/student/OneDir_server/' #'/home/sravan/OneDir/'
+dest = '/home/sravan/OneDir/' #'/home/boom/student/OneDir_server/' #'/home/sravan/OneDir/'
 fileActivity = []
 
 # File transfer code down below
@@ -289,17 +289,14 @@ class FileTransferClientFactory(protocol.ClientFactory):
 
                 src = dest + f1[1]
 
-                if not os.path.isfile(src):
-                    print('ERROR: path does not exist')
 
-                else:
-                    #have to replace ' ' with '|' to prevent ' ' error
-                    src_new = src.replace(' ','|')
+                #have to replace ' ' with '|' to prevent ' ' error
+                src_new = src.replace(' ','|')
 
-                    (self.server)[0].transport.write('DELETE %s %s\n' % (src_new, get_file_md5_hash(src)))
+                (self.server)[0].transport.write('DELETE %s %s\n' % (src_new, 0))
 
-                    # When the transfer is finished, we go back to the line mode
-                    (self.server)[0].setLineMode()
+                # When the transfer is finished, we go back to the line mode
+                (self.server)[0].setLineMode()
 
             elif(f1[0] == "Upload"):
                 #uploading
