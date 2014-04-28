@@ -427,6 +427,8 @@ class FileTransferClientFactory(protocol.ClientFactory):
         fileList = []
         if setSynchronize and (not synchronized):
             print("Start synchronization")
+            #clear the previous file activity detected by watchdog
+            fileActivity = []
             #deleting the old oneDir and creating new oneDir
             print("Deleting previously stored oneDir on server")
 
