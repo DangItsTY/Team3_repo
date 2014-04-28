@@ -10,9 +10,11 @@ COMMANDS = {
             'rename': ('rename', 'Rename a file <old file> <new file>'),
             'delete': ('delete', 'Delete an existing file <file name>'),
             'create': ('create', 'Create a new folder <new folder name>'),
-	    'login': ('login <username> <password>', 'logs user into account'),
-	    'register': ('register <username> <password>', 'registers user account'),
-        'putdir': ('putdir <dirname>')
+	        'login': ('login <username> <password>', 'logs user into account'),
+            'register': ('register <username> <password>', 'registers user account'),
+            'putdir': ('putdir <dirname>', 'put directory on the server'),
+            'syncon': ('syncon', 'start synchornization'),
+            'syncoff': ('syncoff' ,'stop synchronization'),
 }
 
 def timestamp():
