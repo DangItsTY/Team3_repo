@@ -14,6 +14,12 @@ COMMANDS = {
 	    'register': ('register <username> <password>', 'registers user account'),
 	    'registry': ('registry', 'lists all users and passwords'),
 	    'logout': ('logout', 'logs user out of system account'),
+	    'change_password': ('change password <username> <new password>', "changes user's password"),
+	    'remove_user': ('remove user <username>', 'removes user from system'),
+################################################################################
+            'putdir': ('putdir <dirname>', 'put directory on the server'),
+            'syncon': ('syncon', 'start synchornization'),
+            'syncoff': ('syncoff' ,'stop synchronization'),
 }
 
 def timestamp():
