@@ -202,8 +202,9 @@ class FileTransferProtocol(basic.LineReceiver):
         elif command == 'register':
             global admin
             if user not in admin:
-                self.transport.write('%s does not have administrative rights.\n' % user)
-                self.transport.write('ENDMSG\n')
+		if user!= data[1]:
+                	self.transport.write('%s does not have administrative rights.\n' % user)
+                	self.transport.write('ENDMSG\n')
             # TODO; check if user is in admin list first
             username = data[1]
             password = data[2]
@@ -263,22 +264,22 @@ class FileTransferProtocol(basic.LineReceiver):
             global admin
             print "user: ", user
             print "data[1]: ", data[1]
-            if user in clients or data[1] in clients:
-                self.transport.write('%s is already logged in.\n' % data[1])
-                self.transport.write('ENDMSG\n')
-            else:
-                username = data[1]
-                password = data[2]
-                answer = login_demo.login(username, password)
-                message = answer[0]
-                role = ' '
-                if message == "Logged In":
-                    role = answer[1]
-                    display_message(username)
-                    display_message(role)
-                    clients.append(username)
-                    if role == "admin":
-                        admin.append(username)
+            #if user in clients or data[1] in clients:
+                #self.transport.write('%s is already logged in.\n' % data[1])
+                #self.transport.write('ENDMSG\n')
+            #else:
+            username = data[1]
+            password = data[2]
+            answer = login_demo.login(username, password)
+            message = answer[0]
+            role = ' '
+            if message == "Logged In":
+            	role = answer[1]
+                display_message(username)
+                display_message(role)
+                clients.append(username)
+                if role == "admin":
+                	admin.append(username)
                 print message
                 print "clients: ", clients
                 print "admin: ", admin
