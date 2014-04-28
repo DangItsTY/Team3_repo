@@ -1,8 +1,3 @@
-__author__ = 'Dylan Doggett'
-
-import sqlite3 as lite
-import sys
-
 # run -- sqlite3 onedir.db < ondir_create_table -- in shell
 
 def print_version_demo():
@@ -30,10 +25,15 @@ def print_version_demo():
         if con:
             con.close()
 
-def register_user(u,p):
+def register_user(u,p,r):
     returnValue = ' '
-    u = (u + ' ').strip()
-    p = (p + ' ').strip()
+    try:    
+	u = str(u)
+	p = str(p)
+	r = str(r)
+    except UnicodeError:
+	returnValue = "input is invalid";
+	
 
     con = lite.connect('onedir.db')
 
@@ -43,7 +43,7 @@ def register_user(u,p):
         cur = con.cursor()
 
         #cur.execute("DROP TABLE IF EXISTS onedir_login")
-        cur.execute("CREATE TABLE IF NOT EXISTS onedir_login(username TEXT, password TEXT)")
+        cur.execute("CREATE TABLE IF NOT EXISTS onedir_login(username TEXT, password TEXT, role TEXT)")
 
 	sql_cmd =  "SELECT * FROM onedir_login"
         cur.execute(sql_cmd)
@@ -60,16 +60,15 @@ def register_user(u,p):
 	# if the username does not exists
         if does_not_exist_flag == True:
             returnValue = "user %s has been created" % u
-            sql_cmd = "INSERT INTO onedir_login VALUES(?, ?)"
-            cur.execute(sql_cmd, (u, p))
+            sql_cmd = "INSERT INTO onedir_login VALUES(?, ?, ?)"
+            cur.execute(sql_cmd, (u, p, r))
 	else:
 	    returnValue = "user %s already exists" % u	    
-
+ 
     return returnValue
 
-
-
 def retrieve_login_info():
+    user_passwd_dict = {}
     con = lite.connect("onedir.db")
     with con:
         # select a dictionary cursor
@@ -78,12 +77,54 @@ def retrieve_login_info():
         cur = con.cursor()
         cur.execute("SELECT * FROM onedir_login")
         rows = cur.fetchall()
-        print rows, "\n"
+
         for row in rows:
-            print "%s %s" % (row["username"], row["password"])
+	    username = str(row["username"])
+	    password = str(row["password"])
+	    role = str(row["role"])
+	    user_passwd_dict[username] = (password, role)
+            #print "%s %s" % (row["username"], row["password"])
+    return user_passwd_dict
+
+def delete_user(u):
+    con = lite.connect("onedir.db")
+    try:    
+	u = str(u)
+    except UnicodeError:
+	returnValue = "input is invalid";
+
+    with con:
+        # select a dictionary cursor
+        # this allows you to access records by names of columns
+        con.row_factory = lite.Row
+        cur = con.cursor()
+	query = "DELETE FROM onedir_login WHERE username='%s'" % u
+        cur.execute(query)
+    return
+ 
+def change_password(u,p):
+    returnValue = ' '
+    try:    
+	u = str(u)
+	p = str(p)
+    except UnicodeError:
+	returnValue = "input is invalid";
+	
+    con = lite.connect('onedir.db')
+    with con:
+	con.row_factory = lite.Row
+        cur = con.cursor()
+	sql_cmd =  "UPDATE onedir_login SET password='%s' WHERE username='%s'" % (p,u)
+        cur.execute(sql_cmd)  
+
+    return 
+
+
+
 
 def login(u,p):
-    returnValue = ' '
+    returnMessage = ' '
+    userRole = ' '
     u = (u + ' ').strip()
     p = (p + ' ').strip()
    # u = u[:-1]
@@ -105,24 +146,34 @@ def login(u,p):
             if row is None:
                 returnValue = "username not found"
                 flag = True
+	        returnRole = "none"
                 break
             if (username == u and row["password"] == p):
                 returnValue = "Logged In"
                 flag = True
+		print row["role"]	    
+                userRole = str(row["role"])
                 break
             if (username == u and row["password"] != p):
                 returnValue = "invalid password"
+	        userRole = "none"
                 flag = True
                 break
         if flag == False:
             returnValue = "username not found"
+	    returnRole = "none"
 
-    return returnValue
+    return (returnValue, userRole)
 
 def main():
-    print register_user("dwd4bc", "1")
-    retrieve_login_info()
-    #print login("dwd4bc", "1")
+    print register_user("ROOT", "1", "admin")
+    print register_user("a", "2", "user")
+    print register_user("b", "3", "user")
+    print retrieve_login_info()
+    print login("ROOT", "1")
+    change_password("b", "9")
+    print retrieve_login_info()
+
 
 if __name__ == '__main__':
     main()
