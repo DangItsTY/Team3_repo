@@ -1,5 +1,8 @@
 # run -- sqlite3 onedir.db < ondir_create_table -- in shell
 
+import sqlite as lite
+import sys
+
 def print_version_demo():
     con = None
 
