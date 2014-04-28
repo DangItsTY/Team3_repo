@@ -10,19 +10,21 @@ import optparse
 from twisted.internet import protocol, reactor
 from twisted.protocols import basic
 from time import ctime
-from common import COMMANDS, display_message, validate_file_md5_hash, get_file_md5_hash, read_bytes_from_file, clean_and_split_input
+from common import COMMANDS, display_message, validate_file_md5_hash, get_file_md5_hash, read_bytes_from_file, \
+    clean_and_split_input
 
 PORT = 8123
-DIRECTORY = '/home/student/OneDir_server'
+DIRECTORY = '/home/sravan/OneDir_server'
 
 import login_demo
 
 clients = []
 admin = []
 
+
 class FileTransferProtocol(basic.LineReceiver):
     delimiter = '\n'
-	
+
     def connectionMade(self):
         self.factory.clients.append(self)
         self.file_handler = None
@@ -35,7 +37,7 @@ class FileTransferProtocol(basic.LineReceiver):
             'Connection from: %s (%d clients total)' % (self.transport.getPeer().host, len(self.factory.clients)))
 
     def connectionLost(self, reason):
-	
+
         self.factory.clients.remove(self)
         self.file_handler = DIRECTORY
         self.file_data = (DIRECTORY)
@@ -44,28 +46,25 @@ class FileTransferProtocol(basic.LineReceiver):
             'Connection from %s lost (%d clients left)' % (self.transport.getPeer().host, len(self.factory.clients)))
 
     def lineReceived(self, line):
-	global clients
+        global clients
         display_message('Received the following line from the client [%s]: %s' % (self.transport.getPeer().host, line))
 
         data = self._cleanAndSplitInput(line)
         if len(data) == 0 or data == '':
             return
-	
-	user = data.pop()
-	print "in lineReceived: ", data
+
+        user = data.pop()
+        print "in lineReceived: ", data
         command = data[0].lower()
         if not command in COMMANDS:
             self.transport.write('Invalid command\n')
             self.transport.write('ENDMSG\n')
             return
 
-	if command != 'login' and command != 'quit' and user not in clients:
-		self.transport.write('You must be logged in\n')
-		self.transport.write('ENDMSG\n')
-		return
-
-
-
+        if command != 'login' and command != 'quit' and user not in clients:
+            self.transport.write('You must be logged in\n')
+            self.transport.write('ENDMSG\n')
+            return
 
         if command == 'list':
             self._send_list_of_files()
@@ -102,8 +101,8 @@ class FileTransferProtocol(basic.LineReceiver):
                 filename = data[1]
                 file_hash = data[2]
                 #replace the '|' back with ' '
-                filename = filename.replace('|',' ')
-                file_hash = file_hash.replace('|',' ')
+                filename = filename.replace('|', ' ')
+                file_hash = file_hash.replace('|', ' ')
 
             except IndexError:
                 self.transport.write('Missing filename or file MD5 hash\n')
@@ -115,7 +114,7 @@ class FileTransferProtocol(basic.LineReceiver):
             # Switch to the raw mode (for receiving binary data)
             print 'Receiving file: %s' % (filename)
             self.setRawMode()
-##################################################################
+        ##################################################################
 
 
 
@@ -124,7 +123,7 @@ class FileTransferProtocol(basic.LineReceiver):
             try:
                 filename = data[1]
                 #replace the '|' back with ' '
-                filename = filename.replace('|',' ')
+                filename = filename.replace('|', ' ')
 
             except IndexError:
                 self.transport.write('Missing filename or file MD5 hash\n')
@@ -137,11 +136,11 @@ class FileTransferProtocol(basic.LineReceiver):
             print 'Creating directory: %s' % (filename)
 
         elif command == 'delete':
-	    print "in delete"
+            print "in delete"
             try:
                 filename = data[1]
                 #replace the '|' back with ' '
-                filename = filename.replace('|',' ')
+                filename = filename.replace('|', ' ')
 
             except IndexError:
                 self.transport.write('Missing filename or file MD5 hash\n')
@@ -166,7 +165,7 @@ class FileTransferProtocol(basic.LineReceiver):
             else:
                 print "%s does not exist" % filename
 
-####################################################################
+            ####################################################################
         elif command == 'help':
             self.transport.write('Available commands:\n\n')
 
@@ -175,121 +174,120 @@ class FileTransferProtocol(basic.LineReceiver):
 
             self.transport.write('ENDMSG\n')
 
-	elif command == 'registry':
-	    global admin
-	    if user not in admin:
-		self.transport.write('%s does not have administrative rights.\n' % user)
+        elif command == 'registry':
+            global admin
+            if user not in admin:
+                self.transport.write('%s does not have administrative rights.\n' % user)
                 self.transport.write('ENDMSG\n')
-	    else:
-		
-	    # TODO; check if user is in admin list first
-		registry = login_demo.retrieve_login_info()
-		self.transport.write('username\t\tpassword\t\trole\n')
-		for key, value in registry.iteritems():
-			self.transport.write('%s\t\t\t%s\t\t\t%s\n' % (key, value[0],  value[1]))
-		
-		self.transport.write('ENDMSG\n')			
+            else:
+
+                # TODO; check if user is in admin list first
+                registry = login_demo.retrieve_login_info()
+                self.transport.write('username\t\tpassword\t\trole\n')
+                for key, value in registry.iteritems():
+                    self.transport.write('%s\t\t\t%s\t\t\t%s\n' % (key, value[0], value[1]))
+
+                self.transport.write('ENDMSG\n')
 
         elif command == 'register':
-	    global admin
-	    if user not in admin:
-		self.transport.write('%s does not have administrative rights.\n' % user)
+            global admin
+            if user not in admin:
+                self.transport.write('%s does not have administrative rights.\n' % user)
                 self.transport.write('ENDMSG\n')
-	    # TODO; check if user is in admin list first
+            # TODO; check if user is in admin list first
             username = data[1]
             password = data[2]
-	    role = data [3]
+            role = data[3]
             answer = login_demo.register_user(username, password, role)
             print answer
 
-	    created = "user %s has been created" % username
-	    if answer == created:
-		user_path = DIRECTORY + "/%s/OneDir" % username
-		if not os.path.exists(user_path):
-		    try:	
-			os.makedirs(user_path)
-		    except OSError, e: 
-			print e
-	    else:
-		print "%s already exists" % path
-		return False
+            created = "user %s has been created" % username
+            if answer == created:
+                user_path = DIRECTORY + "/%s/OneDir" % username
+                if not os.path.exists(user_path):
+                    try:
+                        os.makedirs(user_path)
+                    except OSError, e:
+                        print e
+            else:
+                print "%s already exists" % path
+                return False
 
-		
             self.transport.write('%s\n' % answer)
             self.transport.write('ENDMSG\n')
 
 
-#####################################################################3
-	elif command == 'change_password':
-	    global admin
-	    if user not in admin:
-		self.transport.write('%s does not have administrative rights.\n' % user)
+        #####################################################################3
+        elif command == 'change_password':
+            global admin
+            if user not in admin:
+                self.transport.write('%s does not have administrative rights.\n' % user)
                 self.transport.write('ENDMSG\n')
             username = data[1]
             password = data[2]
-	    login_demo.change_password(username, password)
+            login_demo.change_password(username, password)
             self.transport.write('ENDMSG\n')
-	    
-	elif command == 'remove_user':
-	    global admin
-	    if user not in admin:
-		self.transport.write('%s does not have administrative rights.\n' % user)
+
+        elif command == 'remove_user':
+            global admin
+            if user not in admin:
+                self.transport.write('%s does not have administrative rights.\n' % user)
                 self.transport.write('ENDMSG\n')
             username = data[1]
-	    login_demo.delete_user(username)
-	    user_path = DIRECTORY + "/%s" % username
-	    print user_path
-            if os.path.isdir(user_path):	
-		try:
-		    shutil.rmtree(user_path)
-		except OSError, e:
-		    print e
-		except shutil.Error, e:
-              	    print e
-	    else:
-		print "%s does not exist" % user_path
+            login_demo.delete_user(username)
+            user_path = DIRECTORY + "/%s" % username
+            print user_path
+            if os.path.isdir(user_path):
+                try:
+                    shutil.rmtree(user_path)
+                except OSError, e:
+                    print e
+                except shutil.Error, e:
+                    print e
+            else:
+                print "%s does not exist" % user_path
             self.transport.write('ENDMSG\n')
 
         elif command == 'login':
-	    global clients
-	    global admin
-	    print "user: ", user
-	    print "data[1]: ", data[1]
-	    if user in clients or data[1] in clients:
-		self.transport.write('%s is already logged in.\n' % data[1])
+            global clients
+            global admin
+            print "user: ", user
+            print "data[1]: ", data[1]
+            if user in clients or data[1] in clients:
+                self.transport.write('%s is already logged in.\n' % data[1])
                 self.transport.write('ENDMSG\n')
-	    else: 
+            else:
                 username = data[1]
                 password = data[2]
                 answer = login_demo.login(username, password)
-		message = answer[0]
-		role = ' '
-       	        if message == "Logged In":
-		    role = answer[1]
-         	    display_message(username)
-		    display_message(role)
-		    clients.append(username)
-		    if role == "admin":
-	   	        admin.append(username)
+                message = answer[0]
+                role = ' '
+                if message == "Logged In":
+                    role = answer[1]
+                    display_message(username)
+                    display_message(role)
+                    clients.append(username)
+                    if role == "admin":
+                        admin.append(username)
                 print message
-	    	print "clients: ", clients
-		print "admin: ", admin
+                print "clients: ", clients
+                print "admin: ", admin
                 self.transport.write('%s %s\n' % (message, username))
                 self.transport.write('ENDMSG\n')
 
-	elif command == 'logout':
-	    global clients
-	    global admin
-	    clients.remove(user)
-	    if user in admin:
-	        admin.remove(user)
+        elif command == 'logout':
+            global clients
+            global admin
+            clients.remove(user)
+            if user in admin:
+                admin.remove(user)
 
-	    print "clients: ", clients
-	    print "admin: ", admin
-	    
-	    self.transport.write('%s logged out of system\n' % user)				
-	    self.transport.write('ENDMSG\n')				
-			
+            print "clients: ", clients
+            print "admin: ", admin
+
+            self.transport.write('%s logged out of system\n' % user)
+            self.transport.write('ENDMSG\n')
+
         elif command == 'quit':
             self.transport.loseConnection()
 
@@ -317,7 +315,7 @@ class FileTransferProtocol(basic.LineReceiver):
 
                 display_message('File %s has been successfully transfered' % (filename))
             else:
-                os.unlink(file_path) ###################################################
+                os.unlink(file_path)  ###################################################
                 self.transport.write('File was successfully transfered but not saved, due to invalid MD5 hash\n')
                 self.transport.write('ENDMSG\n')
 
